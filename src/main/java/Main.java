@@ -11,16 +11,16 @@ public class Main
 {
         public static void main(String[] args)
         {
-                DoubleTensor [] directions = new DoubleTensor[4];
+                DoubleTensor[] directions = new DoubleTensor[4];
                 double[] direction_weights = new double[directions.length];
-                for(int i = 0; i < directions.length; i++)
+                for (int i = 0; i < directions.length; i++)
                 {
                         double theta = 2. * i * Math.PI / directions.length;
                         directions[i] = DoubleTensor.vectorFromValues(Math.sin(theta),
                                 Math.cos(theta));
-                        direction_weights[i] = 2.*Math.PI/directions.length;
+                        direction_weights[i] = 2. * Math.PI / directions.length;
                 }
-                AngularTPGrid grid = new AngularTPGrid(0,0,1,1,5,5,directions,direction_weights,2);
+                AngularTPGrid grid = new AngularTPGrid(0, 0, 1, 1, 10, 10, directions, direction_weights, 2);
                 ArrayList<CellIntegral> cellIntegrals = new ArrayList<>();
                 ArrayList<FaceIntegral> faceIntegrals = new ArrayList<>();
                 ArrayList<BoundaryFaceIntegral> boundaryFaceIntegrals = new ArrayList<>();
@@ -32,7 +32,7 @@ public class Main
                         @Override
                         public double value(DoubleTensor posInSpace, DoubleTensor posOnSphere1, DoubleTensor posOnSphere2)
                         {
-                                return 0.5;
+                                return 1;
                         }
                 };
                 angularTPCellIntegrals.add(new AngularTPCellIntegral(AngularScalarFunction.constantFunction(5),
@@ -44,18 +44,18 @@ public class Main
                 {
                         @Override
                         public double value(DoubleTensor posInSpace, DoubleTensor posOnSphere1, DoubleTensor
-                        posOnSphere2)
+                                posOnSphere2)
                         {
 
-                                return penalty_param*4./Math.max(4.,scatter.value(posInSpace,posOnSphere1,
-                                        posOnSphere2));
+                                return penalty_param * 4. / Math.max(4., scatter.value(posInSpace, posOnSphere1,
+                                        posOnSphere2)*(grid.xEnd - grid.xStart)/grid.numberXCells);
                         }
-                },AngularTPFaceIntegral.JUMP_NORMALAVERAGE_JUMP_NORMALAVERAGE));
+                }, AngularTPFaceIntegral.JUMP_NORMALAVERAGE_JUMP_NORMALAVERAGE));
                 angularTPFaceIntegrals.add(new AngularTPFaceIntegral(AngularScalarFunction.constantFunction(penalty_param),
                         AngularTPFaceIntegral.JUMP_NORMALAVERAGE_JUMP));
                 angularTPFaceIntegrals.add(new AngularTPFaceIntegral(AngularTPFaceIntegral.VALUE_VALUE));
                 //angularTPFaceIntegrals.add(new AngularTPFaceIntegral(AngularTPFaceIntegral.JUMP_NORMALAVERAGE_JUMP_NORMALAVERAGE));
-               // angularTPFaceIntegrals.add(new AngularTPFaceIntegral(AngularScalarFunction.constantFunction(1000),
+                // angularTPFaceIntegrals.add(new AngularTPFaceIntegral(AngularScalarFunction.constantFunction(1000),
                 //        AngularTPFaceIntegral.UPWIND));
                 //angularTPFaceIntegrals.add(new AngularTPFaceIntegral(AngularScalarFunction.constantFunction(10),
                 //        AngularTPFaceIntegral.UPWIND));
@@ -64,10 +64,10 @@ public class Main
                         @Override
                         public double value(DoubleTensor pos)
                         {
-                                if(pos.sub(DoubleTensor.vectorFromValues(0.5,0.5)).vectorNorm()<0.1)
+                                if (pos.sub(DoubleTensor.vectorFromValues(0.5, 0.5)).vectorNorm() < 0.1)
                                         return 100;
-                                else if(pos.sub(DoubleTensor.vectorFromValues(0.5,0.5)).vectorNorm()<0.35)
-                                        return (0.35 - pos.sub(DoubleTensor.vectorFromValues(0.5,0.5)).vectorNorm())*400;
+                                else if (pos.sub(DoubleTensor.vectorFromValues(0.5, 0.5)).vectorNorm() < 0.35)
+                                        return (0.35 - pos.sub(DoubleTensor.vectorFromValues(0.5, 0.5)).vectorNorm()) * 400;
                                 else
                                         return 0;
                         }
@@ -78,21 +78,21 @@ public class Main
                                 return null;
                         }
                 }));
-                grid.evaluateCellIntegrals(cellIntegrals,rightHandSideIntegrals,angularTPCellIntegrals);
-                grid.evaluateFaceIntegrals(faceIntegrals,boundaryFaceIntegrals,angularTPFaceIntegrals);
-                System.out.println(grid.A.getM()+"×"+grid.A.getN());
+                grid.evaluateCellIntegrals(cellIntegrals, rightHandSideIntegrals, angularTPCellIntegrals);
+                grid.evaluateFaceIntegrals(faceIntegrals, boundaryFaceIntegrals, angularTPFaceIntegrals);
+                System.out.println(grid.A.getM() + "×" + grid.A.getN());
                 DoubleTensor solution = grid.A.transpose().solveGMRES(grid.rhs);
                 System.out.println("solved");
                 solution.print_formatted();
                 int pointres = 100;
                 double[][][] values = new double[pointres][pointres][directions.length];
-                for(int k = 0; k < pointres; k++)
+                for (int k = 0; k < pointres; k++)
                 {
-                        for(int j = 0; j < pointres; j++)
+                        for (int j = 0; j < pointres; j++)
                         {
-                                for(int i = 0; i <grid.shapeFunctions.size();i++)
+                                for (int i = 0; i < grid.shapeFunctions.size(); i++)
                                 {
-                                        for(int l = 0; l < directions.length; l++)
+                                        for (int l = 0; l < directions.length; l++)
                                         {
                                                 if (i != -1)
                                                 {
@@ -107,15 +107,15 @@ public class Main
                 }
                 try
                 {
-                        for(int k = 0; k < directions.length; k++)
+                        for (int k = 0; k < directions.length; k++)
                         {
                                 BufferedWriter plotWriter =
-                                        new BufferedWriter(new FileWriter("/home/tovermodus/plot"+k+".dat"));
-                                for(int i = 0; i < pointres; i++)
+                                        new BufferedWriter(new FileWriter("/home/tovermodus/plot" + k + ".dat"));
+                                for (int i = 0; i < pointres; i++)
                                 {
-                                        for(int j = 0; j < pointres; j++)
+                                        for (int j = 0; j < pointres; j++)
                                         {
-                                                plotWriter.write(Double.toString(values[i][j][k])+" ");
+                                                plotWriter.write(Double.toString(values[i][j][k]) + " ");
                                         }
                                         plotWriter.newLine();
                                 }
@@ -126,5 +126,6 @@ public class Main
                 {
                         e.printStackTrace();
                 }
+                System.out.println("done");
         }
 }

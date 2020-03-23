@@ -11,10 +11,12 @@ public class Laplace
 {
         public static void main(String[] args)
         {
+
+
                 long startTime = System.nanoTime();
 
                 System.out.println("output start");
-                TPGrid grid = new TPGrid(0.,0.,1.,1.,32,32,1);
+                TPGrid grid = new TPGrid(0.,0.,1.,1.,320,320,1);
                 CellIntegral gg = new TPCellIntegral(TPCellIntegral.GRAD_GRAD);
                 TPFaceIntegral jj = new TPFaceIntegral(ScalarFunction.constantFunction(1000.0),
                         TPFaceIntegral.VALUE_JUMP_VALUE_JUMP);
@@ -30,9 +32,11 @@ public class Laplace
                 grid.evaluateCellIntegrals(cellIntegrals,rightHandSideIntegrals);
                 grid.evaluateFaceIntegrals(faceIntegrals,boundaryFaceIntegrals);
                 System.out.println("solve system: "+grid.A.getM()+"×"+grid.A.getN());
-                DoubleTensor solution = grid.A.solveCG(grid.rhs,1e-7);
+                DoubleTensor solution = grid.A.transpose().solveBiCGStab(grid.rhs,1e-7);
                 System.out.println("solved");
                 System.out.println(((1.0*System.nanoTime() - startTime)/1e9));
+                //grid.A.print_formatted();
+                //grid.rhs.print_formatted();
                 int pointres = 100;
                 double[][] values = new double[pointres][pointres];
                 for(int k = 0; k < pointres; k++)
@@ -52,7 +56,7 @@ public class Laplace
                 }
                 try
                 {
-                        BufferedWriter plotWriter = new BufferedWriter(new FileWriter("/home/tovermodus/plot.dat"));
+                        BufferedWriter plotWriter = new BufferedWriter(new FileWriter("/home/tovermodus/plot0.dat"));
                         for(int i = 0; i < pointres; i++)
                         {
                                 for(int j = 0; j < pointres; j++)
