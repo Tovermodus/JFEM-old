@@ -9,7 +9,8 @@ public class LagrangeBasisFunction1D extends Function1D
 		this.cell = cell;
 		this.localFunctionNumber = localFunctionNumber;
 		this.polynomialDegree = polynomialDegree;
-		this.degreeOfFreedom = 1.0/polynomialDegree*localFunctionNumber; //equidistant Lagrange dofs
+		this.degreeOfFreedom = cell.positionOnGrid(1.0/polynomialDegree*localFunctionNumber); //equidistant
+		// Lagrange dofs
 	}
 	public double valueOnReferenceCell(double pos)
 	{

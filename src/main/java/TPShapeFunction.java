@@ -1,4 +1,6 @@
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 public class TPShapeFunction extends ScalarShapeFunction
 {
@@ -12,8 +14,7 @@ public class TPShapeFunction extends ScalarShapeFunction
 		functional_point = DoubleTensor.vectorFromValues(xFunction.degreeOfFreedom, yFunction.degreeOfFreedom);
 		this.cells = new ArrayList<>();
 		cells.add(cell);
-		nodeFunctional = new LagrangeNodeFunctional(DoubleTensor.vectorFromValues(xFunction.degreeOfFreedom,
-			yFunction.degreeOfFreedom));
+		nodeFunctional = new LagrangeNodeFunctional(functional_point);
 	}
 
 	@Override
@@ -44,5 +45,16 @@ public class TPShapeFunction extends ScalarShapeFunction
 			return derivative(pos);
 		else
 			return new DoubleTensor(pos.size());
+	}
+
+	@Override
+	Map<Integer, Double> prolongate(ArrayList<ScalarShapeFunction> refinedFunctions)
+	{
+		Map<Integer, Double> ret = new HashMap<>();
+		for(ScalarShapeFunction shapeFunction:refinedFunctions)
+		{
+			ret.put(shapeFunction.globalIndex,shapeFunction.nodeFunctional.evaluate(this));
+		}
+		return ret;
 	}
 }

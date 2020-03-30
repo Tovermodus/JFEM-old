@@ -1,3 +1,5 @@
+import com.google.common.collect.Multimap;
+
 import java.util.ArrayList;
 
 public abstract class Face
@@ -47,5 +49,6 @@ public abstract class Face
 	{
 		return normal.value(pos).inner(jumpInDerivative(func, pos));
 	}
+	abstract ArrayList<Face> refine(Multimap<Cell, Cell> cellMap);
 
 }

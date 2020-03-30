@@ -1,8 +1,4 @@
-
-import jeigen.SparseMatrixLil;
-
 import java.io.BufferedWriter;
-import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -16,7 +12,7 @@ public class Laplace
                 long startTime = System.nanoTime();
 
                 System.out.println("output start");
-                TPGrid grid = new TPGrid(0.,0.,1.,1.,320,320,1);
+                TPGrid grid = new TPGrid(0.,0.,1.,1.,1,1,1);
                 CellIntegral gg = new TPCellIntegral(TPCellIntegral.GRAD_GRAD);
                 TPFaceIntegral jj = new TPFaceIntegral(ScalarFunction.constantFunction(1000.0),
                         TPFaceIntegral.VALUE_JUMP_VALUE_JUMP);
@@ -31,45 +27,16 @@ public class Laplace
                 ArrayList<BoundaryFaceIntegral> boundaryFaceIntegrals = new ArrayList<>();
                 grid.evaluateCellIntegrals(cellIntegrals,rightHandSideIntegrals);
                 grid.evaluateFaceIntegrals(faceIntegrals,boundaryFaceIntegrals);
+                System.out.println(((1.0*System.nanoTime() - startTime)/1e9));
                 System.out.println("solve system: "+grid.A.getM()+"×"+grid.A.getN());
-                DoubleTensor solution = grid.A.transpose().solveBiCGStab(grid.rhs,1e-7);
+                //grid.A.makeParallelReady(12);
+                DoubleTensor solution = grid.A.solveCG(grid.rhs,1e-11);
                 System.out.println("solved");
                 System.out.println(((1.0*System.nanoTime() - startTime)/1e9));
                 //grid.A.print_formatted();
                 //grid.rhs.print_formatted();
-                int pointres = 100;
-                double[][] values = new double[pointres][pointres];
-                for(int k = 0; k < pointres; k++)
-                {
-                        for(int j = 0; j < pointres; j++)
-                        {
-                                for(int i = 0; i <grid.shapeFunctions.size();i++)
-                                {
-                                        if(i !=-4)
-                                        {
-                                                DoubleTensor pos = DoubleTensor.vectorFromValues(1.0 / (pointres-1) * k,
-                                                        1.0 / (pointres-1) * j);
-                                                values[k][j] += grid.shapeFunctions.get(i).value(pos)*solution.at(i);
-                                        }
-                                }
-                        }
-                }
-                try
-                {
-                        BufferedWriter plotWriter = new BufferedWriter(new FileWriter("/home/tovermodus/plot0.dat"));
-                        for(int i = 0; i < pointres; i++)
-                        {
-                                for(int j = 0; j < pointres; j++)
-                                {
-                                        plotWriter.write(Double.toString(values[i][j])+" ");
-                                }
-                                plotWriter.newLine();
-                        }
-                        plotWriter.flush();
-                        plotWriter.close();
-                } catch (IOException e)
-                {
-                        e.printStackTrace();
-                }
+                FESpaceFunction solut = new FESpaceFunction(grid.shapeFunctions, solution);
+                solut.plot(100,"/home/tovermodus/plot0.dat");
+                System.out.println(((1.0*System.nanoTime() - startTime)/1e9));
         }
 }

@@ -1,27 +1,30 @@
-public class AngularTPFaceIntegral
+public class AngularTPFaceIntegral extends AngularFaceIntegral
 {
-	public static  String JUMPJUMP = "JumpJump";
-	AngularScalarFunction weight;
-	String name;
-	public static String JUMP_NORMALAVERAGE_JUMP = "JumpNormalaverageJump";
-	public static String JUMP_NORMALAVERAGE_JUMP_NORMALAVERAGE = "JumpNormalaverageJumpNormalaverage";
-	public static String VALUE_VALUE = "ValueValue";
-	public static String UPWIND = "Upwind";
 	protected AngularTPFaceIntegral()
 	{
 	}
 
 	public AngularTPFaceIntegral(AngularScalarFunction weight, String name)
 	{
-		this.weight = weight;
-		this.name = name;
+		super(weight,name);
 	}
 
 
 	public AngularTPFaceIntegral(String name)
 	{
-		this(AngularScalarFunction.oneFunction(), name);
+		super(name);
 	}
+
+	@Override
+	public double evaluateAngularFaceIntegral(Face face, ScalarShapeFunction function1, ScalarShapeFunction function2, DoubleTensor direction1, DoubleTensor direction2, double directionWeight1, double directionWeight2)
+	{
+
+		if(face instanceof TPFace)
+			return evaluateAngularFaceIntegral((TPFace) face,function1,function2,direction1, direction2,
+				directionWeight1,directionWeight2);
+		throw new UnsupportedOperationException();
+	}
+
 	public double evaluateAngularFaceIntegral(TPFace face,
 	                                          ScalarShapeFunction function1, ScalarShapeFunction function2,
 	                                          DoubleTensor direction1, DoubleTensor direction2,
@@ -70,7 +73,7 @@ public class AngularTPFaceIntegral
 				DoubleTensor point = new DoubleTensor(2);
 				point.set(1-face.normaldirection,face.cell1d.points[i]);
 				point.set(face.normaldirection,face.otherCoordinate);
-				ret += -2*face.normalAverageInValue(function1,point).inner(direction1)*face.jumpInValue(function2,point)*weight*directionWeight1*this.weight.value(point,direction1);
+				ret += -face.normalAverageInValue(function1,point).inner(direction1)*face.jumpInValue(function2,point)*weight*directionWeight1*this.weight.value(point,direction1);
 			}
 			return ret;
 		}

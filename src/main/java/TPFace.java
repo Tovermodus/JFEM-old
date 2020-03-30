@@ -1,4 +1,6 @@
-import javax.swing.*;
+import com.google.common.collect.Multimap;
+
+import java.util.ArrayList;
 
 public class TPFace extends Face
 {
@@ -51,7 +53,9 @@ public class TPFace extends Face
 			if(cell.isInCell(pos))
 			{
 				if (cell.center().at(normaldirection) < otherCoordinate)
+				{
 					return cell;
+				}
 			}
 		}
 		return null;
@@ -88,19 +92,48 @@ public class TPFace extends Face
 		return pos.at(normaldirection) == otherCoordinate && cell1d.isInCell(pos.at(1-normaldirection));
 	}
 
-	public void print()
+	@Override
+	ArrayList<Face> refine(Multimap<Cell, Cell> cellMap)
+	{
+		assert(cells.size()<2);
+		ArrayList<Face> refinedFaces = new ArrayList<>();
+		TPFace face1 = new TPFace(new Cell1D(cell1d.start,cell1d.center()),otherCoordinate,normaldirection);
+		TPFace face2 = new TPFace(new Cell1D(cell1d.center(),cell1d.end),otherCoordinate,normaldirection);
+		for(Cell cell:cells)
+		{
+			for (Cell refinedCell : cellMap.get(cell))
+			{
+				if(refinedCell.isInCell(face1.center()))
+				{
+					refinedCell.faces.add(face1);
+					face1.cells.add(refinedCell);
+				}
+				if(refinedCell.isInCell(face2.center()))
+				{
+					refinedCell.faces.add(face2);
+					face2.cells.add(refinedCell);
+				}
+			}
+		}
+		face1.isBoundaryFace = isBoundaryFace;
+		face2.isBoundaryFace = isBoundaryFace;
+		refinedFaces.add(face1);
+		refinedFaces.add(face2);
+		return refinedFaces;
+
+	}
+    public void print()
 	{
 		if(this.normaldirection == 0)
 		{
-			System.out.println(otherCoordinate+"×["+cell1d.xStart+","+cell1d.xEnd+"]");
+			System.out.println(otherCoordinate+"×["+cell1d.start +","+cell1d.end +"]   " +cells.size());
 		}
 		else
 		{
-			System.out.println("["+cell1d.xStart+","+cell1d.xEnd+"]x"+otherCoordinate);
+			System.out.println("["+cell1d.start +","+cell1d.end +"]×"+otherCoordinate+"   "+cells.size());
 		}
-
+	       
 	}
-
 
 
 

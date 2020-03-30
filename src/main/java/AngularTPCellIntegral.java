@@ -1,24 +1,28 @@
-public class AngularTPCellIntegral
+public class AngularTPCellIntegral extends AngularCellIntegral
 {
-	AngularScalarFunction weight;
-	String name;
-	public static String TRANSPORT="Transport";
-	public static String SCATTERING="Scattering";
-	public static String ABSORPTION="Absorption";
 	protected AngularTPCellIntegral()
 	{
 	}
 
 	public AngularTPCellIntegral(AngularScalarFunction weight, String name)
 	{
-		this.weight = weight;
-		this.name = name;
+		super(weight,name);
 	}
 
 	public AngularTPCellIntegral(String name)
 	{
 		this(AngularScalarFunction.oneFunction(), name);
 	}
+
+	@Override
+	public double evaluateAngularCellIntegral(Cell cell, ScalarShapeFunction function1, ScalarShapeFunction function2, DoubleTensor direction1, DoubleTensor direction2, double directionWeight1, double directionWeight2)
+	{
+		if(cell instanceof TPCell)
+			return evaluateAngularCellIntegral((TPCell) cell,function1,function2,direction1,direction2,
+				directionWeight1,directionWeight2);
+		throw new UnsupportedOperationException();
+	}
+
 	public double evaluateAngularCellIntegral(TPCell cell,
 	                                          ScalarShapeFunction function1, ScalarShapeFunction function2,
 	                                          DoubleTensor direction1, DoubleTensor direction2,

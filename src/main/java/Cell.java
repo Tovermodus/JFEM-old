@@ -4,6 +4,7 @@ public abstract class Cell
 {
 	ArrayList<ScalarShapeFunction> shapeFunctions;
 	ArrayList<Face> faces;
+	boolean refined;
 	public Cell()
 	{
 		faces = new ArrayList<>();
@@ -13,5 +14,6 @@ public abstract class Cell
 	abstract void distributeFunctions(ArrayList<ScalarShapeFunction> shapeFunctions);
 	abstract boolean isInCell(DoubleTensor pos);
 	abstract DoubleTensor center();
+	abstract ArrayList<Cell> refine(ArrayList<Face> refinedFaces);
 
 }

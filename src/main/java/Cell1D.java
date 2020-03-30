@@ -2,8 +2,8 @@ import java.util.ArrayList;
 
 public class Cell1D
 {
-        public double xStart;
-        public double xEnd;
+        public double start;
+        public double end;
         public double[] referenceWeights = {
                 (322.0 - 13 * Math.sqrt(70)) / 900,
                 (322.0 + 13 * Math.sqrt(70)) / 900,
@@ -20,10 +20,10 @@ public class Cell1D
         public double[] weights;
         public ArrayList<LagrangeBasisFunction1D> shapefunctions;
 
-        public Cell1D(double xStart, double xEnd)
+        public Cell1D(double start, double end)
         {
-                this.xStart = xStart;
-                this.xEnd = xEnd;
+                this.start = start;
+                this.end = end;
                 points = new double[referencePoints.length];
                 weights = new double[referencePoints.length];
                 for(int i = 0; i < points.length; i++)
@@ -35,27 +35,27 @@ public class Cell1D
 
         public double length()
         {
-                return (xEnd - xStart);
+                return (end - start);
         }
 
         public double center()
         {
-                return (xEnd + xStart) / 2;
+                return (end + start) / 2;
         }
 
         public boolean isInCell(double pos)                //in [0,1]
         {
-                return (pos >= xStart && pos <= xEnd);
+                return (pos >= start && pos <= end);
         }
 
         public double positionOnReferenceCell(double pos)
         {
-                return (pos - xStart) / length();
+                return (pos - start) / length();
         }
 
         public double positionOnGrid(double pospp)
         {
-                return pospp * length() + xStart;
+                return pospp * length() + start;
         }
 
         public double jacobiDeterminant(double pos)
@@ -72,6 +72,6 @@ public class Cell1D
         }
         public void print()
         {
-                System.out.println("Cell: start" + xStart + ", end: "+xEnd);
+                System.out.println("Cell: start" + start + ", end: "+ end);
         }
 }

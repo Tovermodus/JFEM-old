@@ -1,6 +1,6 @@
 import java.util.ArrayList;
 
-public class TPGrid extends Grid
+public class TPGrid extends Grid implements Assembleable
 {
 	/*
 	TODO: Provide interface for fast TPIntegrals
@@ -30,6 +30,15 @@ public class TPGrid extends Grid
 		assembleCells(polynomialDegree);
 		assembleFunctions();
 	}
+	@Override
+	public void assembleFunctions()
+	{
+		for(Cell cell: cells)
+		{
+			cell.distributeFunctions(shapeFunctions);
+		}
+	}
+	@Override
 	public void assembleCells(int polynomialDegree)
 	{
 		cellsArray = new Cell[numberXCells][numberYCells];
@@ -95,15 +104,6 @@ public class TPGrid extends Grid
 					}
 				}
 			}
-		}
-	}
-	void assembleFunctions()
-	{
-		for(int i = 0; i < cellsArray.length; i++)
-		{
-			System.out.println("distribute functions: "+(int)((1.0*i)/(cellsArray.length)*100)+"%");
-			for(int j = 0; j < cellsArray[0].length;j++)
-				cellsArray[i][j].distributeFunctions(shapeFunctions);
 		}
 	}
 }

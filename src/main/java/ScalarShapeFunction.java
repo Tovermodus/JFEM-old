@@ -1,4 +1,5 @@
 import java.util.ArrayList;
+import java.util.Map;
 
 public abstract class ScalarShapeFunction extends ScalarFunction
 {
@@ -11,4 +12,5 @@ public abstract class ScalarShapeFunction extends ScalarFunction
 	}
 	abstract double valueInCell(DoubleTensor pos, Cell cell);
 	abstract DoubleTensor derivativeInCell(DoubleTensor pos, Cell cell);
+	abstract Map<Integer, Double> prolongate(ArrayList<ScalarShapeFunction> refinedFunctions);
 }
