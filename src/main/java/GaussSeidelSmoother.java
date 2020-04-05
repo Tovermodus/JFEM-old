@@ -25,7 +25,6 @@ public class GaussSeidelSmoother extends Smoother
 			}
 
 		}
-		linv = l.inverse();
 		low = MatrixFormats.getLowerTriangMTJMatrix(l);
 		//l.print_formatted();
 		//MatrixFormats.printMTJMatrix(low);

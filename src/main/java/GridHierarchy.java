@@ -108,8 +108,8 @@ public class GridHierarchy
 	}
 	public DoubleTensor multiGridV(int level, DoubleTensor rightHandSide, ArrayList<Smoother> smoothers)
 	{
-		int preIters = 5;
-		int postIters = 5;
+		int preIters = 2;
+		int postIters = 2;
 		DoubleTensor iterate = new DoubleTensor(rightHandSide.size());
 		Grid g = grids.get(level);
 		Smoother smoother = smoothers.get(level);

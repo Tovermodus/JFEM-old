@@ -1,3 +1,5 @@
+import no.uib.cipr.matrix.DenseLU;
+import no.uib.cipr.matrix.DenseMatrix;
 import no.uib.cipr.matrix.DenseVector;
 import no.uib.cipr.matrix.sparse.IterativeSolverNotConvergedException;
 import org.jetbrains.annotations.NotNull;
@@ -7,7 +9,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.stream.IntStream;
 
-public class DoubleTensor
+public class DoubleTensor implements VectorMultiplication
 {
 	double [] denseValues;
 	double [] sparseValues;
@@ -19,6 +21,15 @@ public class DoubleTensor
 	int rows;
 	boolean isSparse;
 	int dimension;
+	DenseLU lu;
+	public DoubleTensor(int size, double [] denseValues)
+	{
+		this.denseValues = denseValues;
+		this.rows = size;
+		this.cols = 1;
+		this.isSparse = false;
+		this.dimension = 1;
+	}
 	public DoubleTensor(long size)
 	{
 		dimension = 1;
@@ -140,7 +151,7 @@ public class DoubleTensor
 			denseValues[matrixIndex1*getN()+matrixIndex2] = value;
 		else
 		{
-			if(sparseEntries >= sparseValues.length-32)
+			if(sparseEntries >= sparseValues.length-2)
 				resizeSparse();
 			sparseValues[sparseEntries] = value - at(matrixIndex1,matrixIndex2);
 			sparseYs[sparseEntries] = matrixIndex1;
@@ -155,7 +166,7 @@ public class DoubleTensor
 			throw new UnsupportedOperationException();
 		if(isSparse)
 		{
-			if(sparseEntries >= sparseValues.length-32)
+			if(sparseEntries >= sparseValues.length-2)
 				resizeSparse();
 			sparseValues[sparseEntries] = value;
 			sparseYs[sparseEntries] = matrixIndex1;
@@ -373,19 +384,14 @@ public class DoubleTensor
 			}
 			if(this.isSparse && other.isSparse)
 			{
-				ret.sparseEntries = this.sparseEntries + other.sparseEntries;
-
+				ret = new DoubleTensor(this.getM(),this.getN(), true);
 				for(int i = 0; i < this.sparseEntries; i++)
 				{
-					ret.sparseXs[i] = this.sparseXs[i];
-					ret.sparseYs[i] = this.sparseYs[i];
-					ret.sparseValues[i] = this.sparseValues[i];
+					ret.add(this.sparseYs[i],this.sparseXs[i],this.sparseValues[i]);
 				}
-				for(int i = this.sparseEntries; i < other.sparseEntries+this.sparseEntries; i++)
+				for(int i = 0; i < other.sparseEntries; i++)
 				{
-					ret.sparseXs[i] = other.sparseXs[i];
-					ret.sparseYs[i] = other.sparseYs[i];
-					ret.sparseValues[i] = other.sparseValues[i];
+					ret.add(other.sparseYs[i],other.sparseXs[i],other.sparseValues[i]);
 				}
 			}
 			return ret;
@@ -490,13 +496,16 @@ public class DoubleTensor
 		}
 		if(this.isSparse && other.isSparse)
 		{
-			for(int i = 0; i < this.sparseEntries; i++)
-				for(int j = 0; j < other.sparseEntries; j++)
+			//for(int i = 0; i < this.sparseEntries; i++)
+			IntStream.range(0,this.sparseEntries).parallel().forEach(i->
+			{
+				for (int j = 0; j < other.sparseEntries; j++)
 				{
-					if(this.sparseXs[i] == other.sparseYs[j])
+					if (this.sparseXs[i] == other.sparseYs[j])
 						ret.add(this.sparseYs[i], other.sparseXs[j],
-							this.sparseValues[i]*other.sparseValues[j]);
+							this.sparseValues[i] * other.sparseValues[j]);
 				}
+			});
 		}
 		return ret;
 	}
@@ -554,17 +563,20 @@ public class DoubleTensor
 		Matrix m = MatrixFormats.getUJMPMatrix(this);
 		return MatrixFormats.fromUJMPMatrix(m.inv());
 	}
-
-
+	public void generateLU()
+	{
+		lu = DenseLU.factorize(MatrixFormats.getMTJDenseMatrix(this));
+	}
 	public DoubleTensor solve(DoubleTensor rightHandSide)
 	{
 		if(rightHandSide.dimension!=1)
 			throw new UnsupportedOperationException();
-		DoubleTensor ret = new DoubleTensor(rightHandSide);
-		ret =
-			MatrixFormats.fromMTJvector(MatrixFormats.getMTJDenseMatrix(this).solve(MatrixFormats.getMTJvector(rightHandSide),
-			MatrixFormats.getMTJvector(ret)));
-		return ret;
+		if(lu == null)
+			generateLU();
+		DenseMatrix rhs = new DenseMatrix(MatrixFormats.getMTJvector(rightHandSide));
+		DenseMatrix sol = lu.solve(rhs);
+		DenseVector sv = new DenseVector(sol.getData());
+		return MatrixFormats.fromMTJvector(sv);
 	}
 	public DoubleTensor solveCG(DoubleTensor rightHandSide, double residualTolerance)
 	{
@@ -593,14 +605,29 @@ public class DoubleTensor
 		}
 		return iterate;
 	}
-	public DoubleTensor solveGMRES(DoubleTensor rightHandSide)
+	public<T extends VectorMultiplication> DoubleTensor solvePGMRES(T preconditioner, DoubleTensor rightHandSide,
+	                                                                double tol)
 	{
 		DenseVector v = new DenseVector(getM());
 		DoubleTensor x = null;
 		GMRES gm = new GMRES(v);
 		try
 		{
-			x =  gm.solve(this, rightHandSide, 1e-11);
+			x =  gm.solve(preconditioner, this, rightHandSide, tol);
+		} catch (IterativeSolverNotConvergedException e)
+		{
+			e.printStackTrace();
+		}
+		return x;
+	}
+	public DoubleTensor solveGMRES(DoubleTensor rightHandSide, double tol)
+	{
+		DenseVector v = new DenseVector(getM());
+		DoubleTensor x = null;
+		GMRES gm = new GMRES(v);
+		try
+		{
+			x =  gm.solve(this, rightHandSide, tol);
 		} catch (IterativeSolverNotConvergedException e)
 		{
 			e.printStackTrace();
@@ -648,8 +675,54 @@ public class DoubleTensor
 			rho = residuum.inner(startResiduum);
 			beta = alpha/omega*rho/rhoLast;
 			p = residuum.add(p.mul(beta)).sub(v.mul(omega*beta));
-			//if(iter%10 == 0)
-			//	System.out.println("iter "+iter+" "+residuum.vectorNorm());
+			if(iter%3 == 0)
+				System.out.println("iter "+iter+" "+residuum.vectorNorm());
+		}
+		return iterate;
+
+
+	}
+	public<T extends VectorMultiplication> DoubleTensor solvePBiCGStab(T preconditioner, DoubleTensor rightHandSide,
+	                                                                       double residualTolerance)
+	{
+		if(getN() != getN() || dimension != 2 || rightHandSide.dimension != 1)
+			throw new UnsupportedOperationException();
+		DoubleTensor v;
+		DoubleTensor vP;
+		DoubleTensor s;
+		DoubleTensor sP;
+		DoubleTensor t;
+		DoubleTensor tP;
+		DoubleTensor iterate = new DoubleTensor(getM());
+		DoubleTensor startResiduum = rightHandSide.sub(this.mvmul(iterate));
+		DoubleTensor startResiduumP = preconditioner.mvmul(startResiduum);
+		DoubleTensor residuum = new DoubleTensor(startResiduum);
+		DoubleTensor residuumP = preconditioner.mvmul(residuum);
+		DoubleTensor pP = preconditioner.mvmul(residuumP);
+		double alpha;
+		double omega;
+		double rho = residuumP.inner(residuumP);
+		double rhoLast;
+		double beta;
+		for(int iter = 0; iter < getM() && residuum.vectorNorm() > residualTolerance; iter++)
+		{
+			v = this.mvmul(pP);
+			vP = preconditioner.mvmul(v);
+			alpha = rho/vP.inner(startResiduumP);
+			s = residuum.sub(v.mul(alpha));
+			sP = preconditioner.mvmul(s);
+			t = this.mvmul(sP);
+			tP = preconditioner.mvmul(t);
+			omega = tP.inner(sP)/tP.inner(tP);
+			iterate = iterate.add(pP.mul(alpha)).add(sP.mul(omega));
+			residuum = rightHandSide.sub(this.mvmul(iterate));
+			residuumP = sP.sub(tP.mul(omega));
+			rhoLast = rho;
+			rho = residuumP.inner(startResiduumP);
+			beta = alpha/omega*rho/rhoLast;
+			pP = residuumP.add(pP.mul(beta)).sub(vP.mul(omega*beta));
+			if(iter%3 == 0)
+				System.out.println("iter "+iter+" "+residuum.vectorNorm());
 		}
 		return iterate;
 

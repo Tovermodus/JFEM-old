@@ -79,6 +79,7 @@ public class Grid
 	{
 		A = new DoubleTensor(shapeFunctions.size(),shapeFunctions.size(),true);
 		rhs = new DoubleTensor(shapeFunctions.size());
+
 		List<List<Cell>> smallerList = Lists.partition(cells,12);
 		int i = 0;
 		ForkJoinPool pool = new ForkJoinPool(4);
@@ -97,16 +98,17 @@ public class Grid
 						{
 							integral += cellIntegral.evaluateCellIntegral(K, u, v);
 						}
-
-						A.add(v.globalIndex, u.globalIndex, integral);
+						if(integral != 0)
+							A.add(v.globalIndex, u.globalIndex, integral);
 					}
 					double integral = 0;
 					for (RightHandSideIntegral rightHandSideIntegral : rightHandSideIntegrals)
 					{
 						integral += rightHandSideIntegral.evaluateRightHandSideIntegral(K, v);
 					}
-					rhs.add(v.globalIndex, integral);
-					;
+					if(integral != 0)
+						rhs.add(v.globalIndex, integral);
+
 				}
 			}
 
@@ -135,7 +137,8 @@ public class Grid
 						{
 							integral += faceIntegral.evaluateFaceIntegral(F,u,v);
 						}
-						A.add(v.globalIndex, u.globalIndex, integral);
+						if(integral != 0)
+							A.add(v.globalIndex, u.globalIndex, integral);
 					}
 				}
 				if (F.isBoundaryFace)
@@ -148,7 +151,8 @@ public class Grid
 							integral +=
 								boundaryFaceIntegral.evaluateBoundaryFaceIntegral(F, v);
 						}
-						rhs.add(v.globalIndex, integral);
+						if(integral != 0)
+							rhs.add(v.globalIndex, integral);
 					}
 				}
 			}

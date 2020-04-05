@@ -1,44 +1,33 @@
 import com.google.common.collect.Iterables;
 
+import java.util.stream.IntStream;
+
 public class LambdaSmoother extends AngularSmoother
 {
 	double isoScatter;
+	BlockDiagonalMatrix blockDiag;
+	BlockDiagonalMatrix blockInverse;
+
 	public LambdaSmoother(AngularGrid g, String[] args)
 	{
 		super(g, args);
-		isoScatter = Double.parseDouble(args[0]);
+		int blockSize;
+		blockSize = g.g.shapeFunctions.size();
+		System.out.println("create blockdiag");
+		blockDiag = new BlockDiagonalMatrix(g.Areshuffled,blockSize);
+		System.out.println("inverting");
+		//blockInverse = blockDiag.inverse();
+		System.out.println("inverse");
 	}
 
 	@Override
 	public DoubleTensor smooth(DoubleTensor iterate, DoubleTensor rightHandSide)
 	{
-		System.out.println(isoScatter);
-		DoubleTensor scatteredIterate = new DoubleTensor(iterate.size());
-		/*for(int i = 0; i < grid.directions.length; i++)
-		{
-			for(int j = 0; j < grid.g.shapeFunctions.size(); j++)
-				for(int k = 0; k < grid.directions.length; k++)
-					scatteredIterate.add(j*grid.directions.length+i,
-						grid.direction_weights[k]*isoScatter*iterate.at(j*grid.directions.length+k)/3);
-		}*/
-		scatteredIterate = grid.Scat.mvmul(iterate).mul(-1);
-		AngularFESpaceFunction solfunc =
-			new AngularFESpaceFunction(grid.g.shapeFunctions,
-				grid.directions,
-				iterate);
-		solfunc.plot(100,grid.directions,"/home/tovermodus/plot");
-		solfunc =
-			new AngularFESpaceFunction(grid.g.shapeFunctions,
-				grid.directions,
-				scatteredIterate);
-		solfunc.plot(100,grid.directions,"/home/tovermodus/scatter");
-		DoubleTensor newRight = scatteredIterate.mul(1).add(rightHandSide);
-		solfunc =
-			new AngularFESpaceFunction(grid.g.shapeFunctions,
-				grid.directions,
-				newRight);
-		solfunc.plot(100,grid.directions,"/home/tovermodus/right");
-		iterate = grid.TransAbs.solve(scatteredIterate.add(rightHandSide));
+		DoubleTensor res = rightHandSide.sub(grid.A.mvmul(iterate));
+		iterate = iterate.add(grid.shuffle.transpose().mvmul(blockDiag.solve(grid.shuffle.mvmul(res))));
+
+		//DoubleTensor res = rightHandSide.sub(grid.A.mvmul(iterate));
+		//iterate = iterate.add(grid.TransAbs.solve(res));
 		return iterate;
 	}
 }

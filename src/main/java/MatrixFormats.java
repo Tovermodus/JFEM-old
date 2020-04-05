@@ -7,18 +7,22 @@ import org.ojalgo.matrix.store.Primitive64Store;
 import org.ojalgo.matrix.store.SparseStore;
 import org.ujmp.core.DenseMatrix;
 import org.ujmp.core.Matrix;
+import org.ujmp.core.SparseMatrix;
 
 public interface MatrixFormats
 {
 	static Matrix getUJMPMatrix(DoubleTensor t)
 	{
-		Matrix mat = DenseMatrix.Factory.zeros(t.rows,t.cols);
+		Matrix mat;
+		if(t.isSparse)
+			mat = SparseMatrix.Factory.zeros(t.rows,t.cols);
+		else
+			mat = DenseMatrix.Factory.zeros(t.rows,t.cols);
 		if(!t.isSparse)
 			for(int i = 0; i < t.getM(); i++)
 				for(int j = 0; j < t.getN(); j++)
 					mat.setAsDouble(t.denseValues[i*t.getN()+j], i, j);
 		else
-
 			for(int i = 0; i < t.sparseValues.length; i++)
 			{
 				mat.setAsDouble(mat.getAsDouble(t.sparseYs[i],t.sparseXs[i])+t.sparseValues[i],

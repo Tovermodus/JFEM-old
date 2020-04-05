@@ -1,15 +1,22 @@
+import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
+import org.w3c.dom.UserDataHandler;
 
+import java.awt.*;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ForkJoinPool;
 import java.util.stream.IntStream;
 
 public class AngularGrid
 {
 	Grid g;
 	DoubleTensor A;
-	DoubleTensor TransAbs;
+	DoubleTensor Areshuffled;
+	ArrayList<DoubleTensor> cellMatrices;
 	DoubleTensor rhs;
 	DoubleTensor Scat;
+	DoubleTensor shuffle;
 	DoubleTensor [] directions;
 	double [] direction_weights;
 	public AngularGrid(Grid grid, DoubleTensor[] directions, double [] direction_weights)
@@ -31,7 +38,7 @@ public class AngularGrid
 	{
 		A = new DoubleTensor(g.shapeFunctions.size()*directions.length,
 			g.shapeFunctions.size()*directions.length,true);
-		TransAbs = new DoubleTensor(g.shapeFunctions.size()*directions.length,
+		Areshuffled = new DoubleTensor(g.shapeFunctions.size()*directions.length,
 			g.shapeFunctions.size()*directions.length,true);
 		Scat = new DoubleTensor(g.shapeFunctions.size()*directions.length,
 			g.shapeFunctions.size()*directions.length,true);
@@ -39,35 +46,42 @@ public class AngularGrid
 		g.evaluateCellIntegrals(cellIntegrals,rightHandSideIntegrals);
 		IntStream.range(0,directions.length).parallel().forEach(i->
 		{
-			for(int j = 0; j < directions.length; j++)
+
+			List<List<Cell>> smallerList = Lists.partition(g.cells,12);
+			smallerList.stream().parallel().forEach(smallList->
 			{
-				for(Cell cell: g.cells)
+				for (Cell cell : smallList)
 				{
-					for (ScalarShapeFunction u : cell.shapeFunctions)
+					for (int j = 0; j < directions.length; j++)
 					{
-						for (ScalarShapeFunction v : cell.shapeFunctions)
+						for (ScalarShapeFunction u : cell.shapeFunctions)
 						{
-							double integral = 0;
-							double nonScatIntegral = 0;
-							for (AngularCellIntegral angularCellIntegral : angularCellIntegrals)
+							for (ScalarShapeFunction v : cell.shapeFunctions)
 							{
-								double inte = angularCellIntegral.evaluateAngularCellIntegral(cell,u,v,directions[i],directions[j],direction_weights[i],direction_weights[j]);
-								integral += inte;
-								if(!angularCellIntegral.name.equals(AngularCellIntegral.SCATTERING))
-									nonScatIntegral += inte;
-								else
-									Scat.add(v.globalIndex*directions.length+j,
-										u.globalIndex*directions.length+i,inte);
+								double integral = 0;
+								double nonScatIntegral = 0;
+								for (AngularCellIntegral angularCellIntegral : angularCellIntegrals)
+								{
+									double inte = angularCellIntegral.evaluateAngularCellIntegral(cell, u, v, directions[i], directions[j], direction_weights[i], direction_weights[j]);
+									integral += inte;
+									if (!angularCellIntegral.name.equals(AngularCellIntegral.SCATTERING))
+										nonScatIntegral += inte;
+									else
+										Scat.add(v.globalIndex * directions.length + j,
+											u.globalIndex * directions.length + i, inte);
+								}
+								if (integral != 0)
+								{
+									A.add(v.globalIndex * directions.length + j,
+										u.globalIndex * directions.length + i, integral);
+									Areshuffled.add(j*g.shapeFunctions.size()+v.globalIndex,
+										i*g.shapeFunctions.size()+u.globalIndex, integral);
+								}
 							}
-							A.add(v.globalIndex*directions.length+j,
-								u.globalIndex*directions.length+i,integral);
-							if(nonScatIntegral != 0)
-								TransAbs.add(v.globalIndex*directions.length+j,
-									u.globalIndex*directions.length+i,nonScatIntegral);
 						}
 					}
 				}
-			}
+			});
 		});
 
 	}
@@ -87,30 +101,72 @@ public class AngularGrid
 			{
 				rhs.add(k*directions.length+i,g.rhs.at(k));
 			}
+
+			List<List<Face>> smallerList = Lists.partition(g.faces,12);
+			smallerList.stream().parallel().forEach(smallList->
+			{
+				for (Face face : smallList)
+				{
+					for (int j = 0; j < directions.length; j++)
+					{
+						for (ScalarShapeFunction u : face.shapeFunctions)
+						{
+							for (ScalarShapeFunction v : face.shapeFunctions)
+							{
+								double integral = 0;
+								for (AngularFaceIntegral angularFaceIntegral :
+									angularFaceIntegrals)
+								{
+									integral += angularFaceIntegral.evaluateAngularFaceIntegral(face, u, v,
+										directions[i], directions[j], direction_weights[i], direction_weights[j]);
+								}
+								if (integral != 0)
+								{
+									A.add(v.globalIndex * directions.length + j,
+										u.globalIndex * directions.length + i, integral);
+									Areshuffled.add(j*g.shapeFunctions.size()+v.globalIndex,
+										i*g.shapeFunctions.size()+u.globalIndex, integral);
+								}
+							}
+						}
+					}
+				}
+			});
+		});
+		shuffle = new DoubleTensor(A.getM(),A.getN(),true);
+		for(int i = 0; i < g.shapeFunctions.size(); i++)
+		{
 			for(int j = 0; j < directions.length; j++)
 			{
-				for(Face face: g.faces)
+				shuffle.add(j*g.shapeFunctions.size()+i,i*directions.length+j,1);
+			}
+		}
+	}
+	public void generateCellMatrices()
+	{
+		g.cells.stream().parallel().forEach(cell ->
+		{
+			DoubleTensor cellMatrix = new DoubleTensor(cell.shapeFunctions.size()*directions.length,
+				cell.shapeFunctions.size()*directions.length,false);
+			for(int i = 0; i < cell.shapeFunctions.size(); i++)
+			{
+				for(int j = 0; j < cell.shapeFunctions.size(); j++)
 				{
-					for (ScalarShapeFunction u : face.shapeFunctions)
+					for(int k = 0; k < directions.length; k++)
 					{
-						for (ScalarShapeFunction v : face.shapeFunctions)
+						for(int l = 0; l < directions.length; l++)
 						{
-							double integral = 0;
-							for (AngularFaceIntegral angularFaceIntegral :
-								angularFaceIntegrals)
-							{
-								integral += angularFaceIntegral.evaluateAngularFaceIntegral(face,u,v,
-									directions[i],directions[j],direction_weights[i],direction_weights[j]);
-							}
-							A.add(v.globalIndex*directions.length+j,
-								u.globalIndex*directions.length+i,integral);
-							TransAbs.add(v.globalIndex*directions.length+j,
-								u.globalIndex*directions.length+i,integral);
+							ScalarShapeFunction u = cell.shapeFunctions.get(i);
+							ScalarShapeFunction v = cell.shapeFunctions.get(j);
+
+							cellMatrix.add(i*directions.length+k,j*directions.length+l,
+								A.at(u.globalIndex*directions.length+k,
+									v.globalIndex*directions.length+l));
 						}
 					}
 				}
 			}
+			cellMatrices.add(cellMatrix);
 		});
-
 	}
 }

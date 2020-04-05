@@ -91,7 +91,7 @@ public class Main
                 System.out.println("solved");
                 solution.print_formatted();
                 AngularFESpaceFunction solfunc = new AngularFESpaceFunction(grid.shapeFunctions,directions,solution);
-                solfunc.plot(100,directions,"/home/tovermodus/plot");
+                //solfunc.plot(100,directions,"/home/tovermodus/plot");
                 System.out.println("done");
         }
 }

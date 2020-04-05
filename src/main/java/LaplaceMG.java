@@ -12,10 +12,10 @@ public class LaplaceMG
                 Stopwatch stop = Stopwatch.createStarted();
                 System.out.println("output start");
 
-                TPGrid startGrid = new TPGrid(0.,0.,1.,1.,5,5,1);
+                TPGrid startGrid = new TPGrid(0.,0.,1.,1.,3,3,4);
                 GridHierarchy gridHierarchy = new GridHierarchy(startGrid);
                 CellIntegral gg = new TPCellIntegral(ScalarFunction.constantFunction(1.),TPCellIntegral.GRAD_GRAD);
-                TPFaceIntegral jj = new TPFaceIntegral(ScalarFunction.constantFunction(1000.0),
+                TPFaceIntegral jj = new TPFaceIntegral(ScalarFunction.constantFunction(100.0),
                         TPFaceIntegral.VALUE_JUMP_VALUE_JUMP);
                 ArrayList<CellIntegral> cellIntegrals = new ArrayList<>();
                 cellIntegrals.add(gg);
@@ -26,8 +26,6 @@ public class LaplaceMG
                 ArrayList<RightHandSideIntegral> rightHandSideIntegrals = new ArrayList<>();
                 rightHandSideIntegrals.add(rightHandSideIntegral);
                 ArrayList<BoundaryFaceIntegral> boundaryFaceIntegrals = new ArrayList<>();
-                gridHierarchy.addGloballyRefinedLevel();
-                gridHierarchy.addGloballyRefinedLevel();
                 gridHierarchy.addGloballyRefinedLevel();
                 gridHierarchy.addGloballyRefinedLevel();
                 gridHierarchy.evaluateCellIntegrals(cellIntegrals,rightHandSideIntegrals);

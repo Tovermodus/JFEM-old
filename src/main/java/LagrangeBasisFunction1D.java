@@ -37,7 +37,15 @@ public class LagrangeBasisFunction1D extends Function1D
 				}
 				break;
 			default:
-				throw new UnsupportedOperationException();
+				double ret = 1;
+				for(int i = 0; i <= this.polynomialDegree; i++)
+				{
+					if(i != localFunctionNumber)
+					{
+						ret *= (pos - 1.*i/this.polynomialDegree)/(1.*localFunctionNumber/this.polynomialDegree-1.*i/this.polynomialDegree);
+					}
+				}
+				return ret;
 		}
 		return 0;
 	}
@@ -67,7 +75,24 @@ public class LagrangeBasisFunction1D extends Function1D
 				}
 				break;
 			default:
-				throw new UnsupportedOperationException();
+				double derret = 0;
+				for(int j = 0; j <= this.polynomialDegree; j++)
+				{
+					if(j != localFunctionNumber)
+					{
+						double ret =
+							1./(1.*localFunctionNumber/this.polynomialDegree - 1. * j / this.polynomialDegree);
+						for (int i = 0; i <= this.polynomialDegree; i++)
+						{
+							if (i != localFunctionNumber && i != j)
+							{
+								ret *= (pos - 1. * i / this.polynomialDegree) / (1.*localFunctionNumber/this.polynomialDegree - 1. * i / this.polynomialDegree);
+							}
+						}
+						derret += ret;
+					}
+				}
+				return derret;
 		}
 		return 0;
 	}

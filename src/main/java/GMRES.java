@@ -126,7 +126,57 @@ public class GMRES extends AbstractIterativeSolver
 			v[i] = r.copy().zero();
 	}
 
-	public DoubleTensor solve(DoubleTensor A, DoubleTensor b, double tol)
+	public<T extends VectorMultiplication> DoubleTensor solve(T preconditioner, DoubleTensor A,
+	                                                          DoubleTensor b,
+	                                         double tol)
+		throws IterativeSolverNotConvergedException
+	{
+		DoubleTensor x = new DoubleTensor(A.getM());
+		DoubleTensor r_ = preconditioner.mvmul(b.sub(A.mvmul(x)));
+		DoubleTensor w;
+		double normr = r_.vectorNorm();
+		DoubleTensor v_[] = new DoubleTensor[v.length];
+		// Outer iteration
+		for (iter.setFirst(); normr > tol; iter.next()) {
+
+			v_[0] = r_.mul(1./normr);
+			s.zero().set(0, normr);
+			int i = 0;
+			// Inner iteration
+			for (; i < restart && normr>tol; i++, iter
+				.next()) {
+				w = preconditioner.mvmul(A.mvmul(v_[i]));
+				for (int k = 0; k <= i; k++) {
+					H.set(k, i, w.inner(v_[k]));
+					w = v_[k].mul(-H.get(k, i)).add(w);
+				}
+				H.set(i + 1, i, w.vectorNorm());
+				v_[i+1] = w.mul(1. / H.get(i + 1, i));
+				// QR factorization of H using Givens rotations
+				for (int k = 0; k < i; ++k)
+					rotation[k].apply(H, i, k, k + 1);
+
+				rotation[i] = new GivensRotation(H.get(i, i), H.get(i + 1, i));
+				rotation[i].apply(H, i, i, i + 1);
+				rotation[i].apply(s, i, i + 1);
+			}
+
+			// Update solution in current subspace
+			new UpperTriangDenseMatrix(H, i, false).solve(s, s);
+			for (int j = 0; j < i; j++)
+				x = x.add(v_[j].mul(s.get(j)));
+
+			r_ = b.sub(A.mvmul(x));
+			normr = r_.vectorNorm();
+			System.out.println(normr);
+		}
+
+		return x;
+	}
+
+	public DoubleTensor solve(DoubleTensor A,
+	                                                          DoubleTensor b,
+	                                                          double tol)
 		throws IterativeSolverNotConvergedException
 	{
 		DoubleTensor x = new DoubleTensor(A.getM());
@@ -171,7 +221,6 @@ public class GMRES extends AbstractIterativeSolver
 
 		return x;
 	}
-
 	@Override
 	public Vector solve(Matrix matrix, Vector vector, Vector vector1) throws IterativeSolverNotConvergedException
 	{

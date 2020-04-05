@@ -7,7 +7,7 @@ public abstract class AngularScalarFunction
 	public abstract double value(DoubleTensor posInSpace, DoubleTensor posOnSphere1, DoubleTensor posOnSphere2);
 	public double value(DoubleTensor posInSpace, DoubleTensor posOnSphere)
 	{
-		return this.value(posInSpace,posOnSphere, new DoubleTensor((int)posOnSphere.size()));
+		return this.value(posInSpace,posOnSphere, posOnSphere);
 	}
 
 	public static AngularScalarFunction oneFunction()
@@ -28,7 +28,8 @@ public abstract class AngularScalarFunction
 		};
 		return oneF;
 	}
-	public void plot(int pointres, DoubleTensor[] directions, String filenameWithoutEnding)
+	public void plot(int pointres, DoubleTensor[] directions, String filenameWithoutEnding,double xStart,
+	                 double yStart, double xEnd, double yEnd)
 	{
 		double[][][] values = new double[pointres][pointres][directions.length];
 		for (int k = 0; k < pointres; k++)
@@ -38,8 +39,8 @@ public abstract class AngularScalarFunction
 				for (int l = 0; l < directions.length; l++)
 				{
 						DoubleTensor pos =
-							DoubleTensor.vectorFromValues(1. / (pointres - 1) * k,
-								1. / (pointres - 1) * j);
+							DoubleTensor.vectorFromValues(xStart+(xEnd - xStart) / (pointres - 1) * k,
+								yStart+(yEnd-yStart) / (pointres - 1) * j);
 						values[j][k][l] += value(pos,directions[l]);
 				}
 

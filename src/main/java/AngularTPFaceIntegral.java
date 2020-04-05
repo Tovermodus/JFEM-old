@@ -41,7 +41,9 @@ public class AngularTPFaceIntegral extends AngularFaceIntegral
 				DoubleTensor point = new DoubleTensor(2);
 				point.set(1-face.normaldirection,face.cell1d.points[i]);
 				point.set(face.normaldirection,face.otherCoordinate);
-				ret += function1.value(point)*function2.value(point)*Math.abs(direction1.inner(face.normal.value(point)))*weight*directionWeight1*this.weight.value(point,direction1);
+				ret += function1.value(point)*function2.value(point)
+					*Math.abs(direction1.inner(face.normal.value(point)))
+					*weight*directionWeight1*this.weight.value(point,direction1);
 			}
 			return ret;
 		}
@@ -53,11 +55,13 @@ public class AngularTPFaceIntegral extends AngularFaceIntegral
 			double ret = 0;
 			for(int i = 0; i < face.cell1d.weights.length; i++)
 			{
-				double weight = face.cell1d.weights[i];
+				double integralWeight = face.cell1d.weights[i];
 				DoubleTensor point = new DoubleTensor(2);
 				point.set(1-face.normaldirection,face.cell1d.points[i]);
 				point.set(face.normaldirection,face.otherCoordinate);
-				ret += face.normalAverageInValue(function1,point).inner(face.normalAverageInValue(function2,point))*Math.abs(direction1.inner(face.normal.value(point)))*weight*directionWeight1*this.weight.value(point,direction1);
+				ret += face.normalAverageInValue(function1,point).inner(face.normalAverageInValue(function2,point))
+					*Math.abs(direction1.inner(face.normal.value(point)))
+					*integralWeight*directionWeight1*this.weight.value(point,direction1);
 			}
 			return ret;
 		}
@@ -73,7 +77,8 @@ public class AngularTPFaceIntegral extends AngularFaceIntegral
 				DoubleTensor point = new DoubleTensor(2);
 				point.set(1-face.normaldirection,face.cell1d.points[i]);
 				point.set(face.normaldirection,face.otherCoordinate);
-				ret += -face.normalAverageInValue(function1,point).inner(direction1)*face.jumpInValue(function2,point)*weight*directionWeight1*this.weight.value(point,direction1);
+				ret += -2*face.normalAverageInValue(function1,point).inner(direction1)
+					*face.jumpInValue(function2,point)*weight*directionWeight1*this.weight.value(point,direction1);
 			}
 			return ret;
 		}
@@ -90,7 +95,9 @@ public class AngularTPFaceIntegral extends AngularFaceIntegral
 				point.set(face.normaldirection, face.otherCoordinate);
 				//if(((TPFace)face).getDownStreamCell(point,direction1) == null)
 				//	return 0;
-				ret += face.jumpInValue(function1, point) * face.jumpInValue(function2, point) * this.weight.value(point,direction1) * weight;
+				ret += face.jumpInValue(function1, point) * face.jumpInValue(function2, point)
+					* Math.abs(direction1.inner(face.normal.value(point)))
+					* this.weight.value(point,direction1) * weight * directionWeight1;
 			}
 			return ret;
 		}
@@ -109,10 +116,14 @@ public class AngularTPFaceIntegral extends AngularFaceIntegral
 				point.set(face.normaldirection, face.otherCoordinate);
 				//if(((TPFace)face).getDownStreamCell(point,direction1) == null)
 				//	return 0;
-				ret += face.jumpInValue(function1, point) * function2.value(point
-					) * this.weight.value(point,
-					direction1) * weight*direction1.inner(face.normal.value(point));
-
+				//direction1.print_formatted();
+				//face.normal.value(point).print_formatted();
+				ret += face.jumpInValue(function1, point) * face.jumpInValue(function2, point) *
+				this.weight.value(point,
+					direction1) * weight * Math.abs(direction1.inner(face.normal.value(point)));
+//				ret += (face.averageInValue(function1, point)*direction1.inner(face.normal.value(point))+
+//					0.5*face.jumpInValue(function1,point)*Math.abs(direction1.inner(face.normal.value(point))))*function2.value(point)
+//				*weight*directionWeight1;
 			}
 			return ret;
 		}

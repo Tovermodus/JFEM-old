@@ -52,20 +52,27 @@ public class AngularGridHierarchy
 						coeffs.get(i));
 			}
 		}
+		System.out.println("Refined Level"+angularGrids.size());
 	}
 	public void evaluateCellIntegrals(ArrayList<CellIntegral> cellIntegrals,
 	                                  ArrayList<RightHandSideIntegral> rightHandSideIntegrals,
 	                                  ArrayList<AngularCellIntegral> angularCellIntegrals)
 	{
 		for(AngularGrid g:angularGrids)
-			g.evaluateCellIntegrals(cellIntegrals,rightHandSideIntegrals,angularCellIntegrals);
+		{
+			System.out.println("evaluate cells for grid" + (1 + angularGrids.indexOf(g)));
+			g.evaluateCellIntegrals(cellIntegrals, rightHandSideIntegrals, angularCellIntegrals);
+		}
 	}
 	public void evaluateFaceIntegrals(ArrayList<FaceIntegral> faceIntegrals,
 	                                  ArrayList<BoundaryFaceIntegral> boundaryFaceIntegrals,
 	                                  ArrayList<AngularFaceIntegral> angularFaceIntegrals)
 	{
 		for(AngularGrid g:angularGrids)
-			g.evaluateFaceIntegrals(faceIntegrals,boundaryFaceIntegrals,angularFaceIntegrals);
+		{
+			System.out.println("evaluate faces for grid" + (1 + angularGrids.indexOf(g)));
+			g.evaluateFaceIntegrals(faceIntegrals, boundaryFaceIntegrals, angularFaceIntegrals);
+		}
 	}
 
 	public DoubleTensor multiGridSolve(double tolerance, int maxiter,
@@ -92,12 +99,11 @@ public class AngularGridHierarchy
 			}
 		}
 		AngularGrid lastGrid = Iterables.getLast(angularGrids);
-		System.out.println(lastGrid.g.cells.size());
+		System.out.println(lastGrid.g.cells.size() + " cells; " + lastGrid.A.getM() + " Rows in A");
 		DoubleTensor iterate = new DoubleTensor((int)lastGrid.rhs.size());
 		DoubleTensor res = new DoubleTensor(lastGrid.rhs);
 		DoubleTensor correct;
 		System.out.println(res.vectorNorm());
-		res.print_formatted();
 		for (int i = 0; i < maxiter && res.vectorNorm() > tolerance; i++)
 		{
 			correct = multiGridV(prolongationMatrices.size(), res, smoothers);
@@ -112,8 +118,8 @@ public class AngularGridHierarchy
 	}
 	public DoubleTensor multiGridV(int level, DoubleTensor rightHandSide, ArrayList<AngularSmoother> angularSmoothers)
 	{
-		int preIters = 5;
-		int postIters = 5;
+		int preIters = 1;
+		int postIters = 1;
 		DoubleTensor iterate = new DoubleTensor((int)rightHandSide.size());
 		AngularGrid g = angularGrids.get(level);
 		AngularSmoother angularSmoother = angularSmoothers.get(level);
@@ -124,17 +130,19 @@ public class AngularGridHierarchy
 			return g.A.solve(rightHandSide);
 		}
 		for(int k = 0; k < preIters; k++)
-			iterate = angularSmoother.smooth(iterate,rightHandSide);
+		{
+			iterate = angularSmoother.smooth(iterate, rightHandSide);
+		}
 		DoubleTensor restrictedRightHandSide =
 			prolongationMatrices.get(level - 1).tvmul(rightHandSide.sub(g.A.mvmul(iterate)));
 		DoubleTensor correction = multiGridV(level - 1,
 			restrictedRightHandSide,angularSmoothers);
 		iterate = iterate.add(prolongationMatrices.get(level - 1).mvmul(correction));
-		//System.out.println("kajsdka");
 		//System.out.println(rightHandSide.sub(g.A.mvmul(iterate)).vectorNorm());
 		for(int k = 0; k < postIters; k++)
-			iterate = angularSmoother.smooth(iterate,rightHandSide);
-		System.out.println(rightHandSide.sub(g.A.mvmul(iterate)).vectorNorm());
+		{
+			iterate = angularSmoother.smooth(iterate, rightHandSide);
+		}
 		//iterate.print_formatted("return");
 		return iterate;
 
